@@ -1,0 +1,81 @@
+{
+  "version": 100,
+  "platforms": [
+    {
+      "id": "facebook",
+      "name": "Facebook",
+      "domains": ["facebook.com", "fb.watch", "m.facebook.com", "fb.gg"],
+      "videoUrlRegex": "https?:\\/\\/(?:www\\.|m\\.|web\\.)?facebook\\.com\\/[^\"'\\s]+",
+      "extractRules": {
+        "titleSelectors": ["meta[property='og:title']", "title"],
+        "thumbnailSelectors": ["meta[property='og:image']"],
+        "videoStreamRegexes": [
+          "\"browser_native_hd_url\":\"(https?:\\\\/\\\\/[^\"]+)\"",
+          "\"browser_native_sd_url\":\"(https?:\\\\/\\\\/[^\"]+)\"",
+          "\"playable_url_quality_hd\":\"(https?:\\\\/\\\\/[^\"]+)\"",
+          "\"playable_url\":\"(https?:\\\\/\\\\/[^\"]+)\"",
+          "hd_src\\s*:\\s*\"([^\"]+)\"",
+          "sd_src\\s*:\\s*\"([^\"]+)\""
+        ]
+      }
+    },
+    {
+      "id": "instagram",
+      "name": "Instagram",
+      "domains": ["instagram.com", "instagr.am"],
+      "videoUrlRegex": "https?:\\/\\/(?:www\\.)?instagram\\.com\\/(?:p|reel|tv)\\/[^\"'\\s]+",
+      "extractRules": {
+        "titleSelectors": ["meta[property='og:title']", "title"],
+        "thumbnailSelectors": ["meta[property='og:image']"],
+        "videoStreamRegexes": [
+          "\"video_url\":\"(https?:\\\\/\\\\/[^\"]+)\"",
+          "meta\\[property='og:video'\\]",
+          "\"playable_url\":\"(https?:\\\\/\\\\/[^\"]+)\""
+        ]
+      }
+    },
+    {
+      "id": "tiktok",
+      "name": "TikTok",
+      "domains": ["tiktok.com", "vm.tiktok.com", "vt.tiktok.com"],
+      "videoUrlRegex": "https?:\\/\\/(?:www\\.|vt\\.|vm\\.)?tiktok\\.com\\/[^\"'\\s]+",
+      "extractRules": {
+        "titleSelectors": ["meta[property='og:title']", "title"],
+        "thumbnailSelectors": ["meta[property='og:image']"],
+        "videoStreamRegexes": [
+          "\"playAddr\":\"(https?:\\\\/\\\\/[^\"]+)\"",
+          "\"downloadAddr\":\"(https?:\\\\/\\\\/[^\"]+)\"",
+          "meta\\[property='og:video'\\]"
+        ]
+      }
+    },
+    {
+      "id": "twitter",
+      "name": "Twitter / X",
+      "domains": ["twitter.com", "x.com"],
+      "videoUrlRegex": "https?:\\/\\/(?:www\\.)?(?:twitter|x)\\.com\\/[^\"'\\s]+\\/status\\/\\d+",
+      "extractRules": {
+        "titleSelectors": ["meta[property='og:title']", "title"],
+        "thumbnailSelectors": ["meta[property='og:image']"],
+        "videoStreamRegexes": [
+          "\"url\":\"(https?:\\\\/\\\\/video\\.twimg\\.com\\/[^\"]+\\.mp4[^\"]*)\"",
+          "meta\\[property='og:video:url'\\]"
+        ]
+      }
+    },
+    {
+      "id": "pinterest",
+      "name": "Pinterest",
+      "domains": ["pinterest.com", "pin.it"],
+      "videoUrlRegex": "https?:\\/\\/(?:[a-z]{2}\\.)?pinterest\\.com\\/pin\\/\\d+",
+      "extractRules": {
+        "titleSelectors": ["meta[property='og:title']", "title"],
+        "thumbnailSelectors": ["meta[property='og:image']"],
+        "videoStreamRegexes": [
+          "\"url\":\"(https?:\\\\/\\\\/v1\\.pinimg\\.com\\/[^\"]+\\.mp4[^\"]*)\"",
+          "meta\\[property='og:video'\\]"
+        ]
+      }
+    }
+  ]
+}
