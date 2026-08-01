@@ -1,5 +1,5 @@
 {
-  "version": 100,
+  "version": 101,
   "platforms": [
     {
       "id": "facebook",
@@ -25,12 +25,13 @@
       "domains": ["instagram.com", "instagr.am"],
       "videoUrlRegex": "https?:\\/\\/(?:www\\.)?instagram\\.com\\/(?:p|reel|tv)\\/[^\"'\\s]+",
       "extractRules": {
+        "embedTemplate": "https://www.instagram.com/p/{shortcode}/embed/captioned/",
         "titleSelectors": ["meta[property='og:title']", "title"],
-        "thumbnailSelectors": ["meta[property='og:image']"],
+        "thumbnailSelectors": ["meta[property='og:image']", "img.EmbeddedMediaImage"],
         "videoStreamRegexes": [
           "\"video_url\":\"(https?:\\\\/\\\\/[^\"]+)\"",
-          "meta\\[property='og:video'\\]",
-          "\"playable_url\":\"(https?:\\\\/\\\\/[^\"]+)\""
+          "src=\"(https?:\\\\/\\\\/[^\"]+\\.mp4[^\"]*)\"",
+          "meta\\[property='og:video'\\]"
         ]
       }
     },
@@ -55,11 +56,12 @@
       "domains": ["twitter.com", "x.com"],
       "videoUrlRegex": "https?:\\/\\/(?:www\\.)?(?:twitter|x)\\.com\\/[^\"'\\s]+\\/status\\/\\d+",
       "extractRules": {
+        "syndicationTemplate": "https://cdn.syndication.twimg.com/tweet-result?id={tweet_id}&token=x",
         "titleSelectors": ["meta[property='og:title']", "title"],
         "thumbnailSelectors": ["meta[property='og:image']"],
         "videoStreamRegexes": [
-          "\"url\":\"(https?:\\\\/\\\\/video\\.twimg\\.com\\/[^\"]+\\.mp4[^\"]*)\"",
-          "meta\\[property='og:video:url'\\]"
+          "\"url\":\"(https?:\\\\/\\\\/video\\.twimg\\.com\\\\[^\"]+\\.mp4[^\"]*)\"",
+          "(https?:\\\\/\\\\/video\\.twimg\\.com\\\\[^\"]+\\.mp4[^\"]*)"
         ]
       }
     },
@@ -72,7 +74,7 @@
         "titleSelectors": ["meta[property='og:title']", "title"],
         "thumbnailSelectors": ["meta[property='og:image']"],
         "videoStreamRegexes": [
-          "\"url\":\"(https?:\\\\/\\\\/v1\\.pinimg\\.com\\/[^\"]+\\.mp4[^\"]*)\"",
+          "\"url\":\"(https?:\\\\/\\\\/v1\\.pinimg\\.com\\\\[^\"]+\\.mp4[^\"]*)\"",
           "meta\\[property='og:video'\\]"
         ]
       }
