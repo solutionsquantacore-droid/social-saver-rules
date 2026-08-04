@@ -1,5 +1,5 @@
 {
-  "version": 104,
+  "version": 105,
   "platforms": [
     {
       "id": "facebook",
@@ -76,13 +76,14 @@
       "id": "pinterest",
       "name": "Pinterest",
       "domains": ["pinterest.com", "pin.it"],
-      "match_regex": "https?:\\/\\/(?:[a-z]{2}\\.)?pinterest\\.com\\/pin\\/\\d+",
-      "videoUrlRegex": "https?:\\/\\/(?:[a-z]{2}\\.)?pinterest\\.com\\/pin\\/\\d+",
+      "match_regex": "https?:\\/\\/(?:[a-z]{2}\\.|www\\.|pin\\.)?(?:pinterest\\.com|pin\\.it)\\/[^\"'\\s]+",
+      "videoUrlRegex": "https?:\\/\\/(?:[a-z]{2}\\.|www\\.|pin\\.)?(?:pinterest\\.com|pin\\.it)\\/[^\"'\\s]+",
       "extractRules": {
         "titleSelectors": ["meta[property='og:title']", "title"],
         "thumbnailSelectors": ["meta[property='og:image']"],
         "videoStreamRegexes": [
-          "\"url\":\"(https?:\\\\/\\\\/v1\\.pinimg\\.com\\\\[^\"]+\\.mp4[^\"]*)\"",
+          "(https?:\\\\?/\\\\?/[^\",'\\s\\}\\]]+v[0-9]?\\.pinimg\\.com[^\",'\\s\\}\\]]+\\.mp4[^\",'\\s\\}\\]]*)",
+          "(https?:\\\\?/\\\\?/[^\",'\\s\\}\\]]+\\.mp4[^\",'\\s\\}\\]]*)",
           "meta\\[property='og:video'\\]"
         ]
       }
