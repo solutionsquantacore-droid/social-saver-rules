@@ -1,12 +1,37 @@
 {
-  "version": 105,
+  "version": 106,
   "platforms": [
     {
       "id": "facebook",
       "name": "Facebook",
       "domains": ["facebook.com", "fb.watch", "m.facebook.com", "fb.gg"],
-      "match_regex": "https?:\\/\\/(?:www\\.|m\\.|web\\.)?facebook\\.com\\/[^\"'\\s]+",
-      "videoUrlRegex": "https?:\\/\\/(?:www\\.|m\\.|web\\.)?facebook\\.com\\/[^\"'\\s]+",
+      "match_regex": "https?:\\/\\/(?:www\\.|m\\.|web\\.|fb\\.)?(?:facebook\\.com|fb\\.watch)\\/[^\"'\\s]+",
+      "videoUrlRegex": "https?:\\/\\/(?:www\\.|m\\.|web\\.|fb\\.)?(?:facebook\\.com|fb\\.watch)\\/[^\"'\\s]+",
+      "extract_steps": [
+        {
+          "name": "Facebook Web Scraper",
+          "type": "WEB_PAGE",
+          "url": "{url}",
+          "method": "GET",
+          "headers": {
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            "Accept-Language": "en-US,en;q=0.9"
+          },
+          "video_stream_regexes": [
+            "\"browser_native_hd_url\":\"(https?:\\\\/\\\\/[^\"]+)\"",
+            "\"playable_url_quality_hd\":\"(https?:\\\\/\\\\/[^\"]+)\"",
+            "\"browser_native_sd_url\":\"(https?:\\\\/\\\\/[^\"]+)\"",
+            "\"playable_url\":\"(https?:\\\\/\\\\/[^\"]+)\"",
+            "hd_src\\s*:\\s*\"([^\"]+)\"",
+            "sd_src\\s*:\\s*\"([^\"]+)\"",
+            "\"hd_src_no_ratelimit\":\"(https?:\\\\/\\\\/[^\"]+)\"",
+            "\"sd_src_no_ratelimit\":\"(https?:\\\\/\\\\/[^\"]+)\""
+          ],
+          "title_selectors": ["meta[property='og:title']", "title"],
+          "thumbnail_selectors": ["meta[property='og:image']", "meta[property='og:image:secure_url']"],
+          "author_selectors": ["meta[property='og:site_name']", "meta[name='author']"]
+        }
+      ],
       "extractRules": {
         "titleSelectors": ["meta[property='og:title']", "title"],
         "thumbnailSelectors": ["meta[property='og:image']"],
@@ -23,11 +48,67 @@
     {
       "id": "instagram",
       "name": "Instagram",
-      "domains": ["instagram.com", "instagr.am"],
-      "match_regex": "https?:\\/\\/(?:www\\.)?instagram\\.com\\/(?:p|reel|reels|tv)\\/[^\"'\\s]+",
-      "videoUrlRegex": "https?:\\/\\/(?:www\\.)?instagram\\.com\\/(?:p|reel|reels|tv)\\/[^\"'\\s]+",
+      "domains": ["instagram.com", "instagr.am", "ig.me"],
+      "match_regex": "https?:\\/\\/(?:[a-zA-Z0-9_-]+\\.)?(?:instagram\\.com|instagr\\.am|ig\\.me)\\/(?:share\\/)?(?:p|reel|reels|tv)[^\"'\\s]*",
+      "videoUrlRegex": "https?:\\/\\/(?:[a-zA-Z0-9_-]+\\.)?(?:instagram\\.com|instagr\\.am|ig\\.me)\\/(?:share\\/)?(?:p|reel|reels|tv)[^\"'\\s]*",
+      "extract_steps": [
+        {
+          "name": "Instagram WebView Interceptor",
+          "type": "WEBVIEW",
+          "url": "https://www.instagram.com/p/{shortcode}/embed/captioned/",
+          "user_agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1",
+          "timeout_ms": 12000,
+          "poll_interval_ms": 150,
+          "video_stream_regexes": [
+            ".*\\.mp4.*",
+            ".*bytestart.*",
+            ".*cdninstagram\\.com.*",
+            ".*fbcdn\\.net.*"
+          ]
+        },
+        {
+          "name": "Instagram Relay GraphQL Query Primary",
+          "type": "GRAPHQL",
+          "url": "https://www.instagram.com/graphql/query",
+          "method": "POST",
+          "headers": {
+            "X-IG-App-ID": "936619743392459",
+            "X-FB-Friendly-Name": "PolarisPostRootQuery",
+            "X-ASBD-ID": "129477",
+            "Content-Type": "application/x-www-form-urlencoded",
+            "Accept": "*/*"
+          },
+          "body": "doc_id=8845758582119845&variables=%7B%22shortcode%22%3A%22{shortcode}%22%7D",
+          "video_stream_regexes": [
+            "(https?:\\\\?/\\\\?/[^\",'\\s\\}\\]]+\\.mp4[^\",'\\s\\}\\]]*)",
+            "\"video_url\":\\s*\"([^\"]+)\"",
+            "\"video_versions\":\\s*\\[\\s*\\{[^}]*\"url\":\\s*\"([^\"]+)\""
+          ],
+          "title_regexes": ["\"text\":\\s*\"([^\"]+)\"", "\"accessibility_caption\":\\s*\"([^\"]+)\""],
+          "thumbnail_regexes": ["\"display_url\":\\s*\"([^\"]+)\""],
+          "author_regexes": ["\"username\":\\s*\"([^\"]+)\"", "\"full_name\":\\s*\"([^\"]+)\""]
+        },
+        {
+          "name": "Instagram Captioned Embed",
+          "type": "EMBED",
+          "url": "https://www.instagram.com/p/{shortcode}/embed/captioned/",
+          "method": "GET",
+          "headers": {
+            "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
+          },
+          "video_stream_regexes": [
+            "\"video_url\":\\s*\"([^\"]+)\"",
+            "src=\"(https?:\\\\/\\\\/[^\"]+\\.mp4[^\"]*)\"",
+            "(https?:\\\\?/\\\\?/[^\",'\\s\\}\\]]+\\.mp4[^\",'\\s\\}\\]]*)"
+          ],
+          "title_selectors": [".Caption", ".CaptionComments", "div.CaptionUsername"],
+          "thumbnail_selectors": ["img.EmbeddedMediaImage", "meta[property='og:image']"],
+          "author_selectors": [".UsernameText", ".CaptionUsername"]
+        }
+      ],
       "extractRules": {
-        "graphqlTemplate": "https://www.instagram.com/graphql/query/?doc_id=10015901848480474&variables=%7B%22shortcode%22%3A%22{shortcode}%22%7D",
+        "graphqlTemplate": "https://www.instagram.com/graphql/query/?doc_id=8845758582119845&variables=%7B%22shortcode%22%3A%22{shortcode}%22%7D",
         "embedTemplate": "https://www.instagram.com/p/{shortcode}/embed/captioned/",
         "titleSelectors": ["meta[property='og:title']", "title"],
         "thumbnailSelectors": ["meta[property='og:image']", "img.EmbeddedMediaImage"],
@@ -44,6 +125,41 @@
       "domains": ["tiktok.com", "vm.tiktok.com", "vt.tiktok.com"],
       "match_regex": "https?:\\/\\/(?:www\\.|vt\\.|vm\\.)?tiktok\\.com\\/[^\"'\\s]+",
       "videoUrlRegex": "https?:\\/\\/(?:www\\.|vt\\.|vm\\.)?tiktok\\.com\\/[^\"'\\s]+",
+      "extract_steps": [
+        {
+          "name": "TikTok TikWM API",
+          "type": "API",
+          "url": "https://www.tikwm.com/api/?url={encoded_url}",
+          "method": "GET",
+          "headers": {
+            "Accept": "application/json"
+          },
+          "video_stream_regexes": [
+            "\"play\":\\s*\"([^\"]+)\"",
+            "\"wmplay\":\\s*\"([^\"]+)\""
+          ],
+          "title_regexes": ["\"title\":\\s*\"([^\"]+)\""],
+          "thumbnail_regexes": ["\"cover\":\\s*\"([^\"]+)\"", "\"origin_cover\":\\s*\"([^\"]+)\""],
+          "author_regexes": ["\"nickname\":\\s*\"([^\"]+)\"", "\"unique_id\":\\s*\"([^\"]+)\""]
+        },
+        {
+          "name": "TikTok Web Scraper",
+          "type": "WEB_PAGE",
+          "url": "{url}",
+          "method": "GET",
+          "headers": {
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
+          },
+          "video_stream_regexes": [
+            "\"playAddr\":\\s*\"([^\"]+)\"",
+            "\"downloadAddr\":\\s*\"([^\"]+)\"",
+            "(https?:\\\\?/\\\\?/[^\",'\\s\\}\\]]+\\.mp4[^\",'\\s\\}\\]]*)"
+          ],
+          "title_selectors": ["meta[property='og:title']", "title"],
+          "thumbnail_selectors": ["meta[property='og:image']"],
+          "author_selectors": ["meta[property='og:site_name']", "meta[name='author']"]
+        }
+      ],
       "extractRules": {
         "titleSelectors": ["meta[property='og:title']", "title"],
         "thumbnailSelectors": ["meta[property='og:image']"],
@@ -60,6 +176,58 @@
       "domains": ["twitter.com", "x.com"],
       "match_regex": "https?:\\/\\/(?:www\\.)?(?:twitter|x)\\.com\\/(?:i\\/|[^\"'\\s]+\\/)?status\\/\\d+",
       "videoUrlRegex": "https?:\\/\\/(?:www\\.)?(?:twitter|x)\\.com\\/(?:i\\/|[^\"'\\s]+\\/)?status\\/\\d+",
+      "extract_steps": [
+        {
+          "name": "Twitter vxTwitter API",
+          "type": "API",
+          "url": "https://api.vxtwitter.com/Twitter/status/{id}",
+          "method": "GET",
+          "headers": {
+            "User-Agent": "SocialSaverBot/1.0",
+            "Accept": "application/json"
+          },
+          "video_stream_regexes": [
+            "(https?:\\\\?/\\\\?/[^\",'\\s\\}\\]]+\\.mp4[^\",'\\s\\}\\]]*)",
+            "(https?:\\\\/\\\\/[^\",'\\s\\}\\]]+\\.mp4[^\",'\\s\\}\\]]*)",
+            "(https?://[^\",'\\s\\}\\]]+\\.mp4[^\",'\\s\\}\\]]*)"
+          ],
+          "title_regexes": ["\"text\":\\s*\"([^\"]+)\"", "\"full_text\":\\s*\"([^\"]+)\""],
+          "thumbnail_regexes": ["\"media_url_https\":\\s*\"([^\"]+)\"", "\"media_url\":\\s*\"([^\"]+)\""],
+          "author_regexes": ["\"user_screen_name\":\\s*\"([^\"]+)\"", "\"user_name\":\\s*\"([^\"]+)\""]
+        },
+        {
+          "name": "Twitter fxTwitter API",
+          "type": "API",
+          "url": "https://api.fxtwitter.com/status/{id}",
+          "method": "GET",
+          "headers": {
+            "Accept": "application/json"
+          },
+          "video_stream_regexes": [
+            "(https?:\\\\?/\\\\?/[^\",'\\s\\}\\]]+\\.mp4[^\",'\\s\\}\\]]*)",
+            "(https?:\\\\/\\\\/[^\",'\\s\\}\\]]+\\.mp4[^\",'\\s\\}\\]]*)",
+            "(https?://[^\",'\\s\\}\\]]+\\.mp4[^\",'\\s\\}\\]]*)"
+          ],
+          "title_regexes": ["\"text\":\\s*\"([^\"]+)\"", "\"description\":\\s*\"([^\"]+)\""],
+          "thumbnail_regexes": ["\"thumbnail_url\":\\s*\"([^\"]+)\""],
+          "author_regexes": ["\"screen_name\":\\s*\"([^\"]+)\"", "\"name\":\\s*\"([^\"]+)\""]
+        },
+        {
+          "name": "Twitter Syndication API",
+          "type": "API",
+          "url": "https://cdn.syndication.twimg.com/tweet-result?id={id}&token=x",
+          "method": "GET",
+          "headers": {
+            "Accept": "application/json"
+          },
+          "video_stream_regexes": [
+            "(https?:\\\\?/\\\\?/[^\",'\\s\\}\\]]+\\.mp4[^\",'\\s\\}\\]]*)",
+            "\"url\":\"(https?:\\\\/\\\\/video\\.twimg\\.com\\\\[^\"]+\\.mp4[^\"]*)\""
+          ],
+          "title_regexes": ["\"text\":\\s*\"([^\"]+)\""],
+          "author_regexes": ["\"screen_name\":\\s*\"([^\"]+)\"", "\"name\":\\s*\"([^\"]+)\""]
+        }
+      ],
       "extractRules": {
         "vxtwitterTemplate": "https://api.vxtwitter.com/Twitter/status/{tweet_id}",
         "fxtwitterTemplate": "https://api.fxtwitter.com/status/{tweet_id}",
@@ -78,6 +246,25 @@
       "domains": ["pinterest.com", "pin.it"],
       "match_regex": "https?:\\/\\/(?:[a-z]{2}\\.|www\\.|pin\\.)?(?:pinterest\\.com|pin\\.it)\\/[^\"'\\s]+",
       "videoUrlRegex": "https?:\\/\\/(?:[a-z]{2}\\.|www\\.|pin\\.)?(?:pinterest\\.com|pin\\.it)\\/[^\"'\\s]+",
+      "extract_steps": [
+        {
+          "name": "Pinterest Web Scraper",
+          "type": "WEB_PAGE",
+          "url": "{url}",
+          "method": "GET",
+          "headers": {
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
+          },
+          "video_stream_regexes": [
+            "(https?:\\\\?/\\\\?/[^\",'\\s\\}\\]]+v[0-9]?\\.pinimg\\.com[^\",'\\s\\}\\]]+\\.mp4[^\",'\\s\\}\\]]*)",
+            "(https?:\\\\?/\\\\?/[^\",'\\s\\}\\]]+\\.mp4[^\",'\\s\\}\\]]*)",
+            "\"url\":\\s*\"(https?:\\\\/\\\\/[^\"]+\\.mp4[^\"]*)\""
+          ],
+          "title_selectors": ["meta[property='og:title']", "title"],
+          "thumbnail_selectors": ["meta[property='og:image']"],
+          "author_selectors": ["meta[property='pinterestapp:pinner']", "meta[name='author']"]
+        }
+      ],
       "extractRules": {
         "titleSelectors": ["meta[property='og:title']", "title"],
         "thumbnailSelectors": ["meta[property='og:image']"],
