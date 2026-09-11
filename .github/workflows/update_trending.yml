@@ -21,11 +21,6 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Install dependencies
-        run: |
-          pip install --upgrade pip
-          pip install yt-dlp
-
       - name: Run Trending Feed Generator
         run: python generate_trending.py
 
@@ -34,4 +29,4 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git add trending_reels.json
-          git diff --quiet && git diff --staged --quiet || (git commit -m "Auto-update trending reels [skip ci]" && git push)
+          git diff --quiet && git diff --staged --quiet || (git commit -m "Auto-refresh trending reels feed [skip ci]" && git push)
