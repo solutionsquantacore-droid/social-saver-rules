@@ -1,0 +1,84 @@
+{
+  "version": 1,
+  "last_updated": 1726070400000,
+  "reels": [
+    {
+      "id": "ig_cinematic_iceland",
+      "platform": "instagram",
+      "title": "Breathtaking FPV drone flight through volcanic waterfalls in Iceland 🌋✨",
+      "author_name": "nordic.explorers",
+      "author_avatar": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150",
+      "thumbnail_url": "https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9?w=800",
+      "video_url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
+      "original_url": "https://www.instagram.com/reel/C_iceland_fpv/",
+      "views_count": "3.8M",
+      "likes_count": "452K",
+      "duration_seconds": 15
+    },
+    {
+      "id": "fb_woodcraft_satisfying",
+      "platform": "facebook",
+      "title": "Restoring an antique 1920s oak cabinet with traditional joinery 🪵",
+      "author_name": "ArtisanWoodworks",
+      "author_avatar": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150",
+      "thumbnail_url": "https://images.unsplash.com/photo-1540555700478-4be289fbecef?w=800",
+      "video_url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4",
+      "original_url": "https://www.facebook.com/watch/?v=1029384756",
+      "views_count": "1.2M",
+      "likes_count": "98K",
+      "duration_seconds": 15
+    },
+    {
+      "id": "tt_street_food_tokyo",
+      "platform": "tiktok",
+      "title": "Insanely fluffy Japanese Souffle Pancakes made live in Shibuya 🥞",
+      "author_name": "tokyobites",
+      "author_avatar": "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150",
+      "thumbnail_url": "https://images.unsplash.com/photo-1528605248644-14dd04022da1?w=800",
+      "video_url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4",
+      "original_url": "https://www.tiktok.com/@tokyobites/video/7291823746",
+      "views_count": "5.4M",
+      "likes_count": "810K",
+      "duration_seconds": 15
+    },
+    {
+      "id": "ig_sunset_maldives",
+      "platform": "instagram",
+      "title": "Crystal clear turquoise water under the golden hour sun 🏝️🌊",
+      "author_name": "wanderlust_vibes",
+      "author_avatar": "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150",
+      "thumbnail_url": "https://images.unsplash.com/photo-1514282401047-d79a71a590e8?w=800",
+      "video_url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyBlazes.mp4",
+      "original_url": "https://www.instagram.com/reel/C_maldives_sunset/",
+      "views_count": "2.1M",
+      "likes_count": "290K",
+      "duration_seconds": 15
+    },
+    {
+      "id": "tw_robotics_future",
+      "platform": "twitter",
+      "title": "Next-generation bipedal humanoid robot navigating rough outdoor terrain 🤖",
+      "author_name": "TechInnovations",
+      "author_avatar": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150",
+      "thumbnail_url": "https://images.unsplash.com/photo-1485827404703-89b55fcc595e?w=800",
+      "video_url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerMeltdowns.mp4",
+      "original_url": "https://twitter.com/TechInnovations/status/1789234871",
+      "views_count": "940K",
+      "likes_count": "64K",
+      "duration_seconds": 15
+    },
+    {
+      "id": "fb_culinary_pasta",
+      "platform": "facebook",
+      "title": "Fresh handmade fettuccine with slow-simmered bolognese sauce 🍝",
+      "author_name": "NonnaKitchen",
+      "author_avatar": "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150",
+      "thumbnail_url": "https://images.unsplash.com/photo-1551183053-bf91a1d81141?w=800",
+      "video_url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4",
+      "original_url": "https://www.facebook.com/watch/?v=5432109876",
+      "views_count": "1.7M",
+      "likes_count": "142K",
+      "duration_seconds": 52
+    }
+  ]
+}
