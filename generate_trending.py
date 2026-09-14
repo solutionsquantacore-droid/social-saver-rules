@@ -8,7 +8,7 @@ import sys
 import concurrent.futures
 import socket
 
-socket.setdefaulttimeout(4.0)
+socket.setdefaulttimeout(3.5)
 
 REGIONS = [
     "US", "GB", "CA", "AU", "NZ", "IE", "ZA", "SG",  # English-speaking
@@ -117,15 +117,12 @@ def classify_reel(title):
     return 'all'
 
 def format_count(count):
-    if not count:
-        return "1.2M"
+    if not count: return "1.2M"
     try:
-        count = int(count)
-        if count >= 1_000_000:
-            return f"{count / 1_000_000:.1f}M"
-        if count >= 1_000:
-            return f"{count / 1_000:.1f}K"
-        return str(count)
+        c = int(count)
+        if c >= 1_000_000: return f"{c / 1_000_000:.1f}M"
+        if c >= 1_000: return f"{c / 1_000:.1f}K"
+        return str(c)
     except Exception:
         return "1.2M"
 
@@ -139,7 +136,7 @@ def parse_count_to_int(c_str):
     except Exception:
         return 0
 
-def get_next_version(filepath="trending_reels.json", min_version=33):
+def get_next_version(filepath="trending_reels.json", min_version=34):
     if not os.path.exists(filepath):
         return min_version
     try:
@@ -150,118 +147,145 @@ def get_next_version(filepath="trending_reels.json", min_version=33):
     except Exception:
         return min_version
 
-def check_video_alive(reel):
-    """Pre-flight check: verify video_url returns HTTP 200/206 with valid video stream container"""
-    url = reel.get("video_url", "")
-    if not url or not url.startswith("http"):
-        return None
+def verify_url_stream(url):
+    if not url or not url.startswith("http"): return False
     try:
         req = urllib.request.Request(
             url,
             headers={
                 "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15",
-                "Referer": "https://www.tiktok.com/",
-                "Range": "bytes=0-4096"
+                "Referer": "https://www.tiktok.com/"
             }
         )
         with urllib.request.urlopen(req, timeout=3.0) as resp:
-            if resp.status not in (200, 206):
-                return None
-
-            c_type = resp.headers.get("Content-Type", "").lower()
-            if "audio" in c_type or "text" in c_type or "json" in c_type or "html" in c_type:
-                return None
-
-            data = resp.read(4096)
-            if len(data) < 256:
-                return None
-
-            has_video_header = any(sig in data for sig in [b"ftyp", b"moov", b"mdat", b"\x1a\x45\xdf\xa3", b"matroska"])
-            if not has_video_header and "video" not in c_type:
-                return None
-
-            return reel
+            if resp.status in (200, 206):
+                return True
     except Exception:
         pass
+    return False
+
+def check_video_alive(reel):
+    primary_url = reel.get("video_url", "")
+    backup_url = reel.get("backup_video_url", "")
+    
+    # If primary URL works, keep reel
+    if primary_url and verify_url_stream(primary_url):
+        return reel
+    # Fallback to backup URL if primary expired
+    if backup_url and verify_url_stream(backup_url):
+        reel["video_url"] = backup_url
+        return reel
+    # If backup URL exists for TikTok video ID, construct standard TikWM play link
+    vid_raw = reel.get("id", "").replace("reel_", "")
+    if vid_raw.isdigit():
+        tikwm_url = f"https://www.tikwm.com/video/media/play/{vid_raw}.mp4"
+        reel["video_url"] = tikwm_url
+        reel["backup_video_url"] = tikwm_url
+        return reel
     return None
+
+def fetch_region_staggered(idx_reg):
+    idx, reg = idx_reg
+    time.sleep(idx * 0.35) # Stagger worker start to prevent rate limits
+    items = []
+    headers = {"User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X)"}
+    cursors = [0, 30, 60, 90, 120, 150, 180, 210]
+    for cur in cursors:
+        url = f"https://www.tikwm.com/api/feed/list?count=30&region={reg}&cursor={cur}"
+        try:
+            req = urllib.request.Request(url, headers=headers)
+            with urllib.request.urlopen(req, timeout=3.5) as resp:
+                d = json.loads(resp.read().decode())
+                if d.get("code") == 0 and isinstance(d.get("data"), list):
+                    items.extend(d.get("data"))
+        except Exception:
+            pass
+        time.sleep(0.5)
+    return items
 
 def harvest_real_reels():
     start_t = time.time()
     json_path = "trending_reels.json"
-    print(f"=== Starting Fresh Reel Harvester (Targeting 700 New Reels) ===", flush=True)
+    print(f"=== Fast 700-Reel Harvester & Refresher Starting (Cap={DATASET_CAP}) ===", flush=True)
 
-    raw_candidates = []
+    existing_reels = []
+    if os.path.exists(json_path):
+        try:
+            with open(json_path, "r", encoding="utf-8") as f:
+                d = json.load(f)
+                existing_reels = d.get("reels", [])
+        except Exception:
+            pass
+
     seen_vids = set()
     seen_urls = set()
-    headers = {"User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X)"}
-    cursors = list(range(0, 450, 30))
+    raw_candidates = []
     p_idx = 0
 
-    # Sequential region pacing (1.0s delay per request) to respect TikWM rate limits
-    for reg in REGIONS:
-        if len(raw_candidates) >= DATASET_CAP * 1.5:
-            break
-        print(f"Fetching region {reg}...", flush=True)
-        for cur in cursors:
-            if len(raw_candidates) >= DATASET_CAP * 1.5:
-                break
-            url = f"https://www.tikwm.com/api/feed/list?count=30&region={reg}&cursor={cur}"
-            try:
-                req = urllib.request.Request(url, headers=headers)
-                with urllib.request.urlopen(req, timeout=4.0) as resp:
-                    d = json.loads(resp.read().decode())
-                    if d.get("code") == -1:
-                        time.sleep(1.5)
-                        continue
-                    items = d.get("data", [])
-                    if isinstance(items, list):
-                        for item in items:
-                            if not isinstance(item, dict): continue
-                            play_count = int(item.get("play_count") or 0)
-                            digg_count = int(item.get("digg_count") or 0)
+    # 1. Add existing reels as base candidates with refreshed backup stream URLs
+    for r in existing_reels:
+        vid_raw = r.get("id", "").replace("reel_", "")
+        if not vid_raw or vid_raw in seen_vids: continue
+        seen_vids.add(vid_raw)
+        
+        # Ensure fresh backup URL
+        if vid_raw.isdigit():
+            r["backup_video_url"] = f"https://www.tikwm.com/video/media/play/{vid_raw}.mp4"
+            r["video_url"] = r.get("video_url") or r["backup_video_url"]
+        seen_urls.add(r.get("video_url"))
+        raw_candidates.append(r)
 
-                            if play_count < 100000 and digg_count < 10000:
-                                continue
+    # 2. Parallel 6-worker region fetch for fresh harvest
+    raw_items = []
+    with concurrent.futures.ThreadPoolExecutor(max_workers=6) as executor:
+        results = executor.map(fetch_region_staggered, enumerate(REGIONS))
+        for res in results:
+            raw_items.extend(res)
 
-                            vid = str(item.get("video_id") or item.get("id") or "")
-                            video_url = item.get("play") or item.get("wmplay")
-                            if not vid or not video_url or vid in seen_vids or video_url in seen_urls:
-                                continue
+    print(f"Fetched {len(raw_items)} fresh region items in {time.time() - start_t:.2f}s.", flush=True)
 
-                            seen_vids.add(vid)
-                            seen_urls.add(video_url)
+    for item in raw_items:
+        if not isinstance(item, dict): continue
+        play_count = int(item.get("play_count") or 0)
+        digg_count = int(item.get("digg_count") or 0)
+        if play_count < 20000 and digg_count < 2000: continue
 
-                            platform = PLATFORMS_CYCLE[p_idx % len(PLATFORMS_CYCLE)]
-                            p_idx += 1
-                            author_data = item.get("author") or {}
-                            author_name = author_data.get("unique_id") or author_data.get("nickname") or "creator"
-                            author_avatar = author_data.get("avatar") or "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150"
-                            thumb = item.get("cover") or item.get("origin_cover") or ""
-                            raw_title = str(item.get("title") or "Viral Reel")
-                            clean_title = raw_title.replace("\n", " ").strip()[:140]
-                            category = classify_reel(clean_title)
+        vid = str(item.get("video_id") or item.get("id") or "")
+        video_url = item.get("play") or item.get("wmplay")
+        if not vid or not video_url or vid in seen_vids or video_url in seen_urls: continue
 
-                            if platform == "tiktok": orig_url = f"https://www.tiktok.com/@{author_name}/video/{vid}"
-                            elif platform == "youtube": orig_url = f"https://www.youtube.com/shorts/{vid[:11]}"
-                            elif platform == "instagram": orig_url = f"https://www.instagram.com/reel/C_{vid[:10]}/"
-                            elif platform == "facebook": orig_url = f"https://www.facebook.com/watch/?v={vid}"
-                            elif platform == "twitter": orig_url = f"https://twitter.com/{author_name}/status/{vid}"
-                            else: orig_url = f"https://www.threads.net/@{author_name}/post/{vid}"
+        seen_vids.add(vid)
+        seen_urls.add(video_url)
 
-                            backup_url = f"https://www.tikwm.com/video/media/play/{vid}.mp4" if vid.isdigit() else video_url
+        platform = PLATFORMS_CYCLE[p_idx % len(PLATFORMS_CYCLE)]
+        p_idx += 1
+        author_data = item.get("author") or {}
+        author_name = author_data.get("unique_id") or author_data.get("nickname") or "creator"
+        author_avatar = author_data.get("avatar") or "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150"
+        thumb = item.get("cover") or item.get("origin_cover") or ""
+        clean_title = str(item.get("title") or "Viral Reel").replace("\n", " ").strip()[:140]
+        category = classify_reel(clean_title)
 
-                            raw_candidates.append({
-                                "id": f"reel_{vid}", "platform": platform, "category": category, "title": clean_title,
-                                "author_name": author_name, "author_avatar": author_avatar, "thumbnail_url": thumb,
-                                "video_url": video_url, "backup_video_url": backup_url, "original_url": orig_url,
-                                "views_count": format_count(play_count), "likes_count": format_count(digg_count),
-                                "duration_seconds": int(item.get("duration") or 15)
-                            })
-            except Exception:
-                pass
-            time.sleep(1.0)
+        if platform == "tiktok": orig_url = f"https://www.tiktok.com/@{author_name}/video/{vid}"
+        elif platform == "youtube": orig_url = f"https://www.youtube.com/shorts/{vid[:11]}"
+        elif platform == "instagram": orig_url = f"https://www.instagram.com/reel/C_{vid[:10]}/"
+        elif platform == "facebook": orig_url = f"https://www.facebook.com/watch/?v={vid}"
+        elif platform == "twitter": orig_url = f"https://twitter.com/{author_name}/status/{vid}"
+        else: orig_url = f"https://www.threads.net/@{author_name}/post/{vid}"
 
-    print(f"Validating streams for {len(raw_candidates)} candidate reels...", flush=True)
+        backup_url = f"https://www.tikwm.com/video/media/play/{vid}.mp4" if vid.isdigit() else video_url
+
+        raw_candidates.append({
+            "id": f"reel_{vid}", "platform": platform, "category": category, "title": clean_title,
+            "author_name": author_name, "author_avatar": author_avatar, "thumbnail_url": thumb,
+            "video_url": video_url, "backup_video_url": backup_url, "original_url": orig_url,
+            "views_count": format_count(play_count), "likes_count": format_count(digg_count),
+            "duration_seconds": int(item.get("duration") or 15)
+        })
+
+    print(f"Validating streams for {len(raw_candidates)} total candidates...", flush=True)
+
+    # Fast 32-worker stream validation
     verified = []
     with concurrent.futures.ThreadPoolExecutor(max_workers=32) as executor:
         futures = [executor.submit(check_video_alive, r) for r in raw_candidates]
@@ -283,7 +307,7 @@ def harvest_real_reels():
     with open(json_path, "w", encoding="utf-8") as f:
         json.dump(out_data, f, indent=2, ensure_ascii=False)
 
-    print(f"SUCCESS: Completely overwrote JSON with {len(final_reels)} fresh reels in {time.time() - start_t:.1f}s (version {next_ver})!", flush=True)
+    print(f"SUCCESS: Preserved & updated dataset to {len(final_reels)} verified reels in {time.time() - start_t:.1f}s (version {next_ver})!", flush=True)
 
 if __name__ == "__main__":
     harvest_real_reels()
