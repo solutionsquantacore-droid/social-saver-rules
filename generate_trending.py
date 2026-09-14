@@ -157,9 +157,11 @@ def verify_url_stream(url):
                 "Referer": "https://www.tiktok.com/"
             }
         )
-        with urllib.request.urlopen(req, timeout=3.0) as resp:
+        with urllib.request.urlopen(req, timeout=3.5) as resp:
             if resp.status in (200, 206):
-                return True
+                c_type = resp.headers.get("Content-Type", "").lower()
+                if "video" in c_type or "octet-stream" in c_type or resp.headers.get("Content-Length"):
+                    return True
     except Exception:
         pass
     return False
@@ -168,20 +170,24 @@ def check_video_alive(reel):
     primary_url = reel.get("video_url", "")
     backup_url = reel.get("backup_video_url", "")
     
-    # If primary URL works, keep reel
+    # 1. Test primary URL
     if primary_url and verify_url_stream(primary_url):
         return reel
-    # Fallback to backup URL if primary expired
+        
+    # 2. Test backup URL
     if backup_url and verify_url_stream(backup_url):
         reel["video_url"] = backup_url
         return reel
-    # If backup URL exists for TikTok video ID, construct standard TikWM play link
+        
+    # 3. Test constructed TikWM media URL
     vid_raw = reel.get("id", "").replace("reel_", "")
     if vid_raw.isdigit():
         tikwm_url = f"https://www.tikwm.com/video/media/play/{vid_raw}.mp4"
-        reel["video_url"] = tikwm_url
-        reel["backup_video_url"] = tikwm_url
-        return reel
+        if verify_url_stream(tikwm_url):
+            reel["video_url"] = tikwm_url
+            reel["backup_video_url"] = tikwm_url
+            return reel
+            
     return None
 
 def fetch_region_staggered(idx_reg):
