@@ -19,102 +19,68 @@ REGIONS = [
 PLATFORMS_CYCLE = ["tiktok", "youtube", "instagram", "facebook", "twitter", "threads"]
 DATASET_CAP = 700
 
-def classify_reel(title):
+CATEGORIES_CYCLE = ['bold', 'thrilling', 'comedy', 'hacks', 'unexplained', 'gaming_adventure']
+
+def classify_reel(title, vid_id=""):
     t = title.lower()
     
-    # Bold / Glamour / Beauty / Fashion / Models
+    # 1. Bold / Glamour / Beauty / Fashion / Models
     if any(w in t for w in [
         'bold', 'glamour', 'model', 'supermodel', 'photoshoot', 'runway', 'fashionmodel',
         'gorgeous', 'stunning', 'beauty', 'slay', 'bikini', 'beach', 'beachvibes', 'swimwear',
         'summer', 'poolside', 'fitgirl', 'fitnessmodel', 'gymgirl', 'fitcheck', 'abs',
         'ootd', 'styleinspo', 'fashion', 'outfit', 'lookbook', 'dress', 'chic', 'glam',
         'dancetrend', 'viraldance', 'baddie', 'sensual', 'attitude', 'viralgirl', 'hot',
-        'pretty', 'girl', 'babe', 'cute', 'modelshoot'
+        'pretty', 'girl', 'babe', 'cute', 'modelshoot', 'modelwalk', 'baddievibes', 'outfitinspo'
     ]):
         return 'bold'
         
-    # Nature & Landscapes
-    if any(w in t for w in [
-        'naturalbeauty', 'nature', 'landscape', 'landscapes', 'scenic', 'waterfall',
-        'mountains', 'mountain', 'sunset', 'sunrise', 'aestheticnature', 'forest',
-        'ocean', 'beachview', 'sky', 'clouds', 'paradise', 'travel', 'earth', 'wonder'
-    ]):
-        return 'nature'
-        
-    # Gaming & Adventure
-    if any(w in t for w in [
-        'adventuregame', 'gaming', 'gamer', 'gta', 'gta5', 'minecraft', 'roblox',
-        'fortnite', 'pubg', 'cod', 'gameplay', 'clutch', 'gamers', 'playstation',
-        'xbox', 'pcgaming', 'speedrun', 'nintendo', 'epicmoment'
-    ]):
-        return 'gaming_adventure'
-        
-    # Thrilling & Stunts & Adrenaline
+    # 2. Thrilling & Stunts & Adrenaline & Supercars
     if any(w in t for w in [
         'thrilling', 'adrenaline', 'skydiving', 'parkour', 'extreme', 'cliffjumping',
-        'cliffhanger', 'wingsuit', 'bungee', 'roofing', 'stunt', 'stunts', 'freerunning',
-        'speeding', 'danger', 'risky', 'skydive', 'fast'
+        'cliffhanger', 'wingsuit', 'bungee', 'bungeejumping', 'roofing', 'stunt', 'stunts', 'freerunning',
+        'speeding', 'danger', 'risky', 'skydive', 'fast', 'supercar', 'hypercar', 'drift', 'drifting',
+        'motogp', 'nurburgring', 'insaneskill', 'fastandfurious', 'car', 'racing', 'crash'
     ]):
         return 'thrilling'
 
-    # Horror / Scary
-    if any(w in t for w in [
-        'horror', 'scary', 'ghost', 'creepy', 'spooky', 'haunted', 'paranormal',
-        'fears', 'scared', 'nightmare', 'terror', 'demon', 'spirit', 'exorcist',
-        'creepyfacts', 'scariest', 'monster', 'shadow', 'death', 'dark', 'evil', 'scream', '😱', '👻'
-    ]):
-        return 'horror'
-        
-    # Unexplained / Mysteries
-    if any(w in t for w in [
-        'unexplained', 'supernatural', 'ufo', 'uap', 'alien', 'aliens', 'mystery',
-        'mysterious', 'bizarre', 'strange', 'anomaly', 'unsolved', 'glitch',
-        'skinwalker', 'cryptid', 'space', 'deepsea', 'secret', 'unknown', '👁️', '🛸'
-    ]):
-        return 'unexplained'
-
-    # Conspiracy / Theories
-    if any(w in t for w in [
-        'conspiracy', 'darkfacts', 'secrets', 'hidden', 'theory', 'theories',
-        'illuminati', 'classified', 'deepweb', 'darkweb', 'mindblown', 'matrix',
-        'declassified', 'cia', 'fbi', 'government', 'truth', 'exposed', 'lies', '🕵️', '🤫'
-    ]):
-        return 'conspiracy'
-
-    # Accidents / Close Calls
-    if any(w in t for w in [
-        'accident', 'crash', 'closecall', 'nearmiss', 'shocking', 'insane', 'wreck',
-        'narrow', 'saved', 'miracle', 'disaster', 'caughtoncamera', 'carcrash',
-        'driftfail', 'hit', 'survived', '💥', '⚠️'
-    ]):
-        return 'accidents'
-
-    # Comedy / Funny
+    # 3. Comedy / Funny / Pranks / Memes
     if any(w in t for w in [
         'funny', 'comedy', 'prank', 'pranks', 'fails', 'lol', 'humor', 'lmao',
         'rofl', 'meme', 'memes', 'hilarious', 'joke', 'jokes', 'laugh', 'crazy',
-        'silly', 'skit', 'funniest', 'reaction', '🤣', '😂', '💀'
+        'silly', 'skit', 'funniest', 'reaction', 'trynottolaugh', 'instantkarma', 'unexpected',
+        'dankmemes', 'hilariousmoments', '🤣', '😂', '💀'
     ]):
         return 'comedy'
 
-    # Motivational / Workout
+    # 4. Mind-Blowing / Hacks / Tech / DIY / Satisfying
     if any(w in t for w in [
-        'motivation', 'motivational', 'mindset', 'inspirational', 'inspire',
-        'inspiration', 'success', 'grind', 'discipline', 'gymmotivation',
-        'speech', 'hustle', 'wisdom', 'hardwork', 'nevergiveup', 'workout',
-        'fitness', 'gym', 'focus', 'money', 'quotes', 'goals', 'win', 'trophy', '🏆', '💪', '🌟'
-    ]):
-        return 'motivational'
-
-    # Hacks / Tech / DIY
-    if any(w in t for w in [
-        'lifehacks', 'gadgets', 'magic', 'diy', 'tricks', 'inventions',
-        'futuristic', 'smart', 'tech', 'tool', 'hack', 'hacks', 'genius',
-        'lifehack', 'craft', 'recipe', 'food', 'cooking', 'chef', 'kitchen', 'idea', '💡', '⚙️'
+        'lifehacks', 'gadgets', 'smartgadgets', 'magic', 'diy', 'tricks', 'inventions',
+        'futuristic', 'smart', 'tech', 'tool', 'hack', 'hacks', 'genius', 'satisfying',
+        'oddlysatisfying', 'techhacks', 'asmr', 'crafts', 'lifehack', 'idea', '💡', '⚙️'
     ]):
         return 'hacks'
 
-    return 'all'
+    # 5. Unexplained / Mysteries / Paranormal
+    if any(w in t for w in [
+        'unexplained', 'supernatural', 'paranormal', 'ufo', 'uap', 'alien', 'aliens', 'mystery',
+        'mysterious', 'bizarre', 'strange', 'anomaly', 'unsolved', 'glitch', 'skinwalker',
+        'cryptid', 'space', 'deepsea', 'creepyfacts', 'darkweb', 'secret', 'unknown', 'matrix',
+        'glitchinmatrix', 'scariest', 'creepy', 'spooky', 'ghost', 'haunted', '👁️', '🛸'
+    ]):
+        return 'unexplained'
+
+    # 6. Gaming & Adventure
+    if any(w in t for w in [
+        'adventuregame', 'gaming', 'gamer', 'gta', 'gta5', 'gta6', 'minecraft', 'roblox',
+        'fortnite', 'pubg', 'cod', 'warzone', 'gameplay', 'clutch', 'gamers', 'playstation',
+        'xbox', 'pcgaming', 'speedrun', 'nintendo', 'epicmoment', 'epicmoments', 'esports'
+    ]):
+        return 'gaming_adventure'
+
+    # Deterministic balanced category distribution for unclassified viral videos
+    h = abs(hash(str(vid_id or title)))
+    return CATEGORIES_CYCLE[h % len(CATEGORIES_CYCLE)]
 
 def format_count(count):
     if not count: return "1.2M"
@@ -228,12 +194,15 @@ def harvest_real_reels():
     raw_candidates = []
     p_idx = 0
 
-    # 1. Add existing reels as base candidates with refreshed backup stream URLs
+    # 1. Add existing reels as base candidates with refreshed backup stream URLs & re-classified categories
     for r in existing_reels:
         vid_raw = r.get("id", "").replace("reel_", "")
         if not vid_raw or vid_raw in seen_vids: continue
         seen_vids.add(vid_raw)
         
+        # Re-classify category into 6 high-retention niches
+        r["category"] = classify_reel(r.get("title", ""), vid_raw)
+
         # Ensure fresh backup URL
         if vid_raw.isdigit():
             r["backup_video_url"] = f"https://www.tikwm.com/video/media/play/{vid_raw}.mp4"
@@ -270,7 +239,7 @@ def harvest_real_reels():
         author_avatar = author_data.get("avatar") or "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150"
         thumb = item.get("cover") or item.get("origin_cover") or ""
         clean_title = str(item.get("title") or "Viral Reel").replace("\n", " ").strip()[:140]
-        category = classify_reel(clean_title)
+        category = classify_reel(clean_title, vid)
 
         if platform == "tiktok": orig_url = f"https://www.tiktok.com/@{author_name}/video/{vid}"
         elif platform == "youtube": orig_url = f"https://www.youtube.com/shorts/{vid[:11]}"
