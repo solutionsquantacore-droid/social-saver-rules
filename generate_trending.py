@@ -13,7 +13,10 @@ socket.setdefaulttimeout(3.5)
 REGIONS = [
     "US", "GB", "CA", "AU", "NZ", "IE", "ZA", "SG",  # English-speaking
     "IN", "PK", "BD", "LK",                          # India & South Asia
-    "KR", "VN", "PH", "ID", "TH", "MY"               # South Korea, Vietnam & SE Asia
+    "KR", "VN", "PH", "ID", "TH", "MY",              # South Korea & SE Asia
+    "BR", "MX", "DE", "FR", "IT", "ES", "JP", "AR",  # LatAm & Europe & Japan
+    "CL", "CO", "PE", "EG", "SA", "AE", "TR", "NL",  # Middle East & LatAm
+    "SE", "NO", "FI", "DK", "PL", "CZ", "RO", "GR"   # Nordics & Eastern Europe
 ]
 
 PLATFORMS_CYCLE = ["tiktok", "youtube", "instagram", "facebook", "twitter", "threads"]
@@ -178,41 +181,16 @@ def fetch_region_staggered(idx_reg):
 def harvest_real_reels():
     start_t = time.time()
     json_path = "trending_reels.json"
-    print(f"=== Fast 700-Reel Harvester & Refresher Starting (Cap={DATASET_CAP}) ===", flush=True)
-
-    existing_reels = []
-    if os.path.exists(json_path):
-        try:
-            with open(json_path, "r", encoding="utf-8") as f:
-                d = json.load(f)
-                existing_reels = d.get("reels", [])
-        except Exception:
-            pass
+    print(f"=== 100% Fresh Replacement Harvester Starting (Cap={DATASET_CAP}) ===", flush=True)
 
     seen_vids = set()
     seen_urls = set()
     raw_candidates = []
     p_idx = 0
 
-    # 1. Add existing reels as base candidates with refreshed backup stream URLs & re-classified categories
-    for r in existing_reels:
-        vid_raw = r.get("id", "").replace("reel_", "")
-        if not vid_raw or vid_raw in seen_vids: continue
-        seen_vids.add(vid_raw)
-        
-        # Re-classify category into 6 high-retention niches
-        r["category"] = classify_reel(r.get("title", ""), vid_raw)
-
-        # Ensure fresh backup URL
-        if vid_raw.isdigit():
-            r["backup_video_url"] = f"https://www.tikwm.com/video/media/play/{vid_raw}.mp4"
-            r["video_url"] = r.get("video_url") or r["backup_video_url"]
-        seen_urls.add(r.get("video_url"))
-        raw_candidates.append(r)
-
-    # 2. Parallel 6-worker region fetch for fresh harvest
+    # Parallel 8-worker region fetch for 100% fresh harvest across 44 global regions
     raw_items = []
-    with concurrent.futures.ThreadPoolExecutor(max_workers=6) as executor:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=8) as executor:
         results = executor.map(fetch_region_staggered, enumerate(REGIONS))
         for res in results:
             raw_items.extend(res)
