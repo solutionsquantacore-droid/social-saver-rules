@@ -2,8 +2,8 @@ name: Auto-Update Trending Reels Feed
 
 on:
   schedule:
-    # Runs automatically every 6 hours (00:00, 06:00, 12:00, 18:00 UTC)
-    - cron: '0 */6 * * *'
+    # Runs automatically every 3 hours (00:00, 03:00, 06:00, 09:00, 12:00, 15:00, 18:00, 21:00 UTC)
+    - cron: '0 */3 * * *'
   workflow_dispatch: # Allows manual trigger via GitHub Actions UI
 
 permissions:
@@ -29,4 +29,4 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git add trending_reels.json
-          git diff --quiet && git diff --staged --quiet || (git commit -m "Auto-refresh trending reels feed [skip ci]" && git push)
+          git diff --quiet && git diff --staged --quiet || (git commit -m "Auto-refresh 700 viral reels feed [skip ci]" && git push)
