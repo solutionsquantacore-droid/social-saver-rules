@@ -102,7 +102,7 @@ def parse_count_to_int(c_str):
     except Exception:
         return 0
 
-def get_next_version(filepath="trending_reels.json", min_version=34):
+def get_next_version(filepath="trending_reels.json", min_version=100):
     if not os.path.exists(filepath):
         return min_version
     try:
