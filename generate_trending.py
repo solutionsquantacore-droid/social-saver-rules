@@ -117,8 +117,9 @@ def get_next_version(filepath="trending_reels.json", min_version=1.0):
         return min_version
 
 def verify_url_stream(url, max_ttfb=2.5):
-    """ Enforce that the target URL returns HTTP 200/206 with a video/octet-stream Content-Type within max_ttfb seconds """
+    """ Enforce that the target URL returns HTTP 200/206 with a genuine video Content-Type within max_ttfb seconds """
     if not url or not url.startswith("http"): return False
+    if "mime_type=audio" in url or ".mp3" in url: return False
     try:
         req = urllib.request.Request(
             url,
@@ -130,7 +131,11 @@ def verify_url_stream(url, max_ttfb=2.5):
         t0 = time.time()
         with urllib.request.urlopen(req, timeout=3.0) as resp:
             ttfb = time.time() - t0
+            c_type = resp.headers.get("Content-Type", "").lower()
             if resp.status in (200, 206) and ttfb <= max_ttfb:
+                # Strictly reject audio, image, text, html or json content-types
+                if any(bad in c_type for bad in ["audio", "image", "text", "html", "json"]):
+                    return False
                 return True
     except Exception:
         pass
@@ -204,7 +209,9 @@ def harvest_real_reels():
     for r in existing_reels:
         vid = r.get("id", "").replace("reel_", "")
         vurl = r.get("video_url", "")
-        if vid and vurl and "-eu.com" not in vurl:
+        # Filter existing items to ensure no audio-only or low-view items remain
+        likes_val = parse_count_to_int(r.get("likes_count", "0"))
+        if vid and vurl and "-eu.com" not in vurl and likes_val >= 1000:
             seen_vids.add(vid)
             seen_urls.add(vurl)
             raw_candidates.append(r)
@@ -223,10 +230,23 @@ def harvest_real_reels():
     for item in raw_items:
         if not isinstance(item, dict): continue
 
+        # 1. Strictly skip TikTok Photo Mode / Slideshows
+        if item.get("images") or item.get("images_count"): continue
+
         vid = str(item.get("video_id") or item.get("id") or "")
         play_url = str(item.get("play") or "")
         wmplay_url = str(item.get("wmplay") or play_url)
         if not vid or not play_url or vid in seen_vids or play_url in seen_urls: continue
+        if "mime_type=audio" in play_url or ".mp3" in play_url: continue
+
+        # 2. Quality Filter: Minimum 1,000+ Likes and 10,000+ Views
+        play_count = int(item.get("play_count") or 0)
+        digg_count = int(item.get("digg_count") or 0)
+        if digg_count < 1000 or play_count < 10000: continue
+
+        # 3. Duration Filter: Must be actual video (>= 3 seconds)
+        duration = int(item.get("duration") or 0)
+        if duration < 3: continue
 
         # Prioritize fast non-EU CDN streams and skip slow EU-only streams
         if "-eu.com" in play_url and "-us.com" in wmplay_url:
@@ -240,9 +260,6 @@ def harvest_real_reels():
 
         seen_vids.add(vid)
         seen_urls.add(video_url)
-
-        play_count = int(item.get("play_count") or 50000)
-        digg_count = int(item.get("digg_count") or 5000)
 
         platform = PLATFORMS_CYCLE[p_idx % len(PLATFORMS_CYCLE)]
         p_idx += 1
@@ -275,7 +292,7 @@ def harvest_real_reels():
             "original_url": orig_url,
             "views_count": format_count(play_count),
             "likes_count": format_count(digg_count),
-            "duration_seconds": int(item.get("duration") or 15)
+            "duration_seconds": duration
         })
 
     print(f"Validating direct MP4 video streams for {len(raw_candidates)} total candidates...", flush=True)
