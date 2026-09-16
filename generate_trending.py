@@ -18,8 +18,8 @@ REGIONS = [
 ]
 
 PLATFORMS_CYCLE = ["youtube", "tiktok", "instagram", "facebook", "twitter", "threads"]
-DATASET_TARGET = 500
-DATASET_CAP = 700
+DATASET_TARGET = 300
+DATASET_CAP = 350
 
 CATEGORIES_CYCLE = ['bold', 'thrilling', 'comedy', 'hacks', 'unexplained', 'gaming_adventure']
 
@@ -163,6 +163,29 @@ def check_video_alive(reel):
 
     return None
 
+VIRAL_KEYWORDS = [
+    "viral reels", "trending shorts", "satisfying asmr", "funny fails",
+    "supercars drift", "glamour fashion", "life hacks", "extreme stunts",
+    "funny memes", "gaming clutch", "unexplained mystery", "dance trend",
+    "luxury lifestyle", "oddly satisfying", "comedy skit"
+]
+
+def fetch_keyword_search(keyword):
+    items = []
+    headers = {"User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X)"}
+    url = f"https://www.tikwm.com/api/feed/search?keywords={urllib.parse.quote(keyword)}&count=30"
+    try:
+        req = urllib.request.Request(url, headers=headers)
+        with urllib.request.urlopen(req, timeout=5.0) as resp:
+            d = json.loads(resp.read().decode())
+            if d.get("code") == 0 and isinstance(d.get("data"), list):
+                items.extend(d.get("data"))
+            elif d.get("code") == 0 and isinstance(d.get("data"), dict) and isinstance(d.get("data").get("videos"), list):
+                items.extend(d.get("data").get("videos"))
+    except Exception:
+        pass
+    return items
+
 def fetch_region_staggered(idx_reg):
     idx, reg = idx_reg
     time.sleep(idx * 0.20)
@@ -189,7 +212,7 @@ def fetch_region_staggered(idx_reg):
 def harvest_real_reels():
     start_t = time.time()
     json_path = "trending_reels.json"
-    print(f"=== 500+ Fast-Routing Verified MP4 Reel Harvester v120 Starting (Target={DATASET_TARGET}) ===", flush=True)
+    print(f"=== Multi-Stream Viral Reel Harvester Starting (Target={DATASET_TARGET}) ===", flush=True)
 
     seen_vids = set()
     seen_urls = set()
@@ -218,14 +241,17 @@ def harvest_real_reels():
 
     p_idx = len(raw_candidates)
 
-    print(f"Fetching region streams across {len(REGIONS)} global regions...", flush=True)
+    print(f"Fetching region streams across {len(REGIONS)} global regions & {len(VIRAL_KEYWORDS)} viral keywords...", flush=True)
     raw_items = []
-    with concurrent.futures.ThreadPoolExecutor(max_workers=8) as executor:
-        results = executor.map(fetch_region_staggered, enumerate(REGIONS))
-        for res in results:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=12) as executor:
+        region_results = list(executor.map(fetch_region_staggered, enumerate(REGIONS)))
+        keyword_results = list(executor.map(fetch_keyword_search, VIRAL_KEYWORDS))
+        for res in region_results:
+            raw_items.extend(res)
+        for res in keyword_results:
             raw_items.extend(res)
 
-    print(f"Fetched {len(raw_items)} fresh region items.", flush=True)
+    print(f"Fetched {len(raw_items)} total fresh raw items.", flush=True)
 
     for item in raw_items:
         if not isinstance(item, dict): continue
