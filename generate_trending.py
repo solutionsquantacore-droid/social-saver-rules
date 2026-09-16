@@ -12,9 +12,9 @@ import re
 socket.setdefaulttimeout(5.0)
 
 REGIONS = [
-    "IN", "US", "IN", "US", "IN", "US",               # Heavy India & US focus
-    "CA", "AU", "NZ", "SG", "PH", "ID", "MY", "GB",  # English & SE Asia fast regions
-    "KR", "JP", "BR", "MX", "PK", "BD", "AE", "SA"   # East Asia, LatAm, South Asia & Middle East
+    "US", "IN", "GB", "CA", "AU", "SG", "ID", "JP", "KR", "BR",
+    "MX", "DE", "FR", "ES", "IT", "PH", "MY", "TH", "VN", "AE",
+    "SA", "PK", "BD", "NG", "EG", "TR"
 ]
 
 PLATFORMS_CYCLE = ["youtube", "tiktok", "instagram", "facebook", "twitter", "threads"]
@@ -147,17 +147,17 @@ def check_video_alive(reel):
     
     # Prioritize non-EU stream if primary is -eu.com and backup is fast
     if "-eu.com" in primary_url and backup_url and "-eu.com" not in backup_url:
-        if verify_url_stream(backup_url, max_ttfb=2.5):
+        if verify_url_stream(backup_url, max_ttfb=5.0):
             reel["video_url"] = backup_url
             reel["backup_video_url"] = primary_url
             return reel
 
-    # 1. Test primary MP4 stream URL (< 2.5s TTFB)
-    if primary_url and verify_url_stream(primary_url, max_ttfb=2.5):
+    # 1. Test primary MP4 stream URL (< 5.0s TTFB)
+    if primary_url and verify_url_stream(primary_url, max_ttfb=5.0):
         return reel
         
-    # 2. Test backup MP4 stream URL (< 2.5s TTFB)
-    if backup_url and verify_url_stream(backup_url, max_ttfb=2.5):
+    # 2. Test backup MP4 stream URL (< 5.0s TTFB)
+    if backup_url and verify_url_stream(backup_url, max_ttfb=5.0):
         reel["video_url"] = backup_url
         return reel
 
@@ -172,33 +172,40 @@ VIRAL_KEYWORDS = [
 
 def fetch_keyword_search(keyword):
     items = []
-    headers = {"User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X)"}
-    url = f"https://www.tikwm.com/api/feed/search?keywords={urllib.parse.quote(keyword)}&count=30"
-    try:
-        req = urllib.request.Request(url, headers=headers)
-        with urllib.request.urlopen(req, timeout=5.0) as resp:
-            d = json.loads(resp.read().decode())
-            if d.get("code") == 0 and isinstance(d.get("data"), list):
-                items.extend(d.get("data"))
-            elif d.get("code") == 0 and isinstance(d.get("data"), dict) and isinstance(d.get("data").get("videos"), list):
-                items.extend(d.get("data").get("videos"))
-    except Exception:
-        pass
+    headers = {
+        "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X)",
+        "Content-Type": "application/x-www-form-urlencoded"
+    }
+    endpoints = ["https://www.tikwm.com/api/feed/search", "https://www.tikwm.com/api/posts/search"]
+    for ep in endpoints:
+        for cursor in [0, 30, 60]:
+            try:
+                data = urllib.parse.urlencode({"keywords": keyword, "count": 30, "cursor": cursor}).encode('utf-8')
+                req = urllib.request.Request(ep, data=data, headers=headers)
+                with urllib.request.urlopen(req, timeout=5.0) as resp:
+                    d = json.loads(resp.read().decode())
+                    if d.get("code") == 0:
+                        res_data = d.get("data")
+                        if isinstance(res_data, list):
+                            items.extend(res_data)
+                        elif isinstance(res_data, dict):
+                            if isinstance(res_data.get("videos"), list):
+                                items.extend(res_data.get("videos"))
+                            elif isinstance(res_data.get("posts"), list):
+                                items.extend(res_data.get("posts"))
+            except Exception:
+                pass
+            time.sleep(0.15)
     return items
 
-def fetch_region_staggered(idx_reg):
-    idx, reg = idx_reg
-    time.sleep(idx * 0.20)
+def fetch_region_staggered(reg):
     items = []
     headers = {"User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X)"}
-    # Deep pagination up to cursor 1500 for IN and US, 600 for other fast regions
-    max_cursor = 1500 if reg in ("IN", "US") else 600
-    cursors = list(range(0, max_cursor, 30))
-    for cur in cursors:
-        url = f"https://www.tikwm.com/api/feed/list?count=30&region={reg}&cursor={cur}"
+    for cursor in [0, 30, 60, 90, 120]:
+        url = f"https://www.tikwm.com/api/feed/list?count=30&region={reg}&cursor={cursor}"
         try:
             req = urllib.request.Request(url, headers=headers)
-            with urllib.request.urlopen(req, timeout=4.0) as resp:
+            with urllib.request.urlopen(req, timeout=8.0) as resp:
                 d = json.loads(resp.read().decode())
                 if d.get("code") == 0 and isinstance(d.get("data"), list):
                     fetched = d.get("data")
@@ -206,7 +213,7 @@ def fetch_region_staggered(idx_reg):
                     items.extend(fetched)
         except Exception:
             pass
-        time.sleep(0.20)
+        time.sleep(0.3)
     return items
 
 def harvest_real_reels():
@@ -241,14 +248,11 @@ def harvest_real_reels():
 
     p_idx = len(raw_candidates)
 
-    print(f"Fetching region streams across {len(REGIONS)} global regions & {len(VIRAL_KEYWORDS)} viral keywords...", flush=True)
+    print(f"Fetching region streams across {len(REGIONS)} global regions...", flush=True)
     raw_items = []
-    with concurrent.futures.ThreadPoolExecutor(max_workers=12) as executor:
-        region_results = list(executor.map(fetch_region_staggered, enumerate(REGIONS)))
-        keyword_results = list(executor.map(fetch_keyword_search, VIRAL_KEYWORDS))
+    with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
+        region_results = list(executor.map(fetch_region_staggered, REGIONS))
         for res in region_results:
-            raw_items.extend(res)
-        for res in keyword_results:
             raw_items.extend(res)
 
     print(f"Fetched {len(raw_items)} total fresh raw items.", flush=True)
