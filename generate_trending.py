@@ -303,19 +303,6 @@ def harvest_real_reels():
         json.dump(out_data, f, indent=2, ensure_ascii=False)
 
     print(f"SUCCESS: Generated dataset with {len(final_reels)} 100% verified MP4 reels in {time.time() - start_t:.1f}s (version {next_ver})!", flush=True)
-    push_to_github(json_path, next_ver)
-
-def push_to_github(filepath="trending_reels.json", version=1.0):
-    print(f"=== Committing & Pushing {filepath} (v{version}) to Git main branch ===", flush=True)
-    try:
-        import subprocess
-        subprocess.run(["git", "add", filepath], check=True)
-        commit_msg = f"Update trending reels feed v{version}"
-        subprocess.run(["git", "commit", "-m", commit_msg], check=False)
-        subprocess.run(["git", "push", "origin", "main"], check=False)
-        print(f"Git push executed for v{version}.", flush=True)
-    except Exception as e:
-        print(f"Git push warning: {e}", flush=True)
 
 if __name__ == "__main__":
     harvest_real_reels()
