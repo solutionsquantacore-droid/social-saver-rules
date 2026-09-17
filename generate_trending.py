@@ -145,22 +145,21 @@ def check_video_alive(reel):
     primary_url = reel.get("video_url", "")
     backup_url = reel.get("backup_video_url", "")
     
-    # Prioritize non-EU stream if primary is -eu.com and backup is fast
-    if "-eu.com" in primary_url and backup_url and "-eu.com" not in backup_url:
-        if verify_url_stream(backup_url, max_ttfb=5.0):
-            reel["video_url"] = backup_url
-            reel["backup_video_url"] = primary_url
-            return reel
+    primary_ok = primary_url and verify_url_stream(primary_url, max_ttfb=4.0)
+    backup_ok = backup_url and verify_url_stream(backup_url, max_ttfb=4.0)
 
-    # 1. Test primary MP4 stream URL (< 5.0s TTFB)
-    if primary_url and verify_url_stream(primary_url, max_ttfb=5.0):
+    if primary_ok and backup_ok:
         return reel
-        
-    # 2. Test backup MP4 stream URL (< 5.0s TTFB)
-    if backup_url and verify_url_stream(backup_url, max_ttfb=5.0):
+    elif primary_ok:
+        # Backup URL failed or returned 400/404; set backup to primary so ExoPlayer never hits a 400 error
+        reel["backup_video_url"] = primary_url
+        return reel
+    elif backup_ok:
+        # Primary URL failed; set primary to backup_url
         reel["video_url"] = backup_url
         return reel
 
+    # Both streams failed / video is deleted -> reject reel
     return None
 
 VIRAL_KEYWORDS = [
