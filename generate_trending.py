@@ -116,20 +116,25 @@ def get_next_version(filepath="trending_reels.json", min_version=1.0):
     except Exception:
         return min_version
 
-def verify_url_stream(url, max_ttfb=2.5):
-    """ Enforce that the target URL returns HTTP 200/206 with a genuine video Content-Type within max_ttfb seconds """
+def verify_url_stream(url, max_ttfb=4.0):
+    """ Enforce that the target URL returns HTTP 200/206 with a genuine video Content-Type from global CDN nodes """
     if not url or not url.startswith("http"): return False
     if "mime_type=audio" in url or ".mp3" in url: return False
+    
+    # Reject region-bound / IP-restricted edge clusters (e.g. v19.tiktokcdn.com or alisg cluster)
+    if "v19.tiktokcdn.com" in url or "/alisg/" in url:
+        return False
+
     try:
         req = urllib.request.Request(
             url,
             headers={
-                "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15",
+                "User-Agent": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36",
                 "Referer": "https://www.tiktok.com/"
             }
         )
         t0 = time.time()
-        with urllib.request.urlopen(req, timeout=3.0) as resp:
+        with urllib.request.urlopen(req, timeout=4.0) as resp:
             ttfb = time.time() - t0
             c_type = resp.headers.get("Content-Type", "").lower()
             if resp.status in (200, 206) and ttfb <= max_ttfb:
