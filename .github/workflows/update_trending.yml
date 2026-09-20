@@ -23,12 +23,11 @@ jobs:
 
       - name: Run Feed Generators
         run: |
-          python generate_trending.py
           python generate_youtube_trending.py
 
       - name: Commit and Push Updates
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git add trending_reels.json youtube_trending.json
+          git add youtube_trending.json
           git diff --quiet && git diff --staged --quiet || (git commit -m "Auto-refresh trending reels and YouTube Shorts feed [skip ci]" && git push)
