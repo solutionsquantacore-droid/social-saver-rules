@@ -175,18 +175,19 @@ def harvest_catchy_shorts():
             json.dump(out_data, f, indent=2, ensure_ascii=False)
         print(f"SUCCESS: Written {len(final_reels)} catchy YouTube Shorts to {RULES_JSON_PATH} (v{next_ver})!", flush=True)
 
-        # Copy generator script to social-saver-rules as well
         rules_script_path = os.path.join(RULES_REPO_DIR, "generate_youtube_trending.py")
         with open(__file__, "r", encoding="utf-8") as src, open(rules_script_path, "w", encoding="utf-8") as dst:
             dst.write(src.read())
-
-        push_to_github(RULES_REPO_DIR, RULES_JSON_PATH, next_ver)
 
     # 2. Also write directly to local app assets so offline works instantly
     if os.path.exists(os.path.dirname(LOCAL_ASSET_PATH)):
         with open(LOCAL_ASSET_PATH, "w", encoding="utf-8") as f:
             json.dump(out_data, f, indent=2, ensure_ascii=False)
         print(f"SUCCESS: Synced {len(final_reels)} catchy Shorts to app assets: {LOCAL_ASSET_PATH}!", flush=True)
+
+    # 3. Push to git if possible
+    if os.path.exists(RULES_REPO_DIR):
+        push_to_github(RULES_REPO_DIR, RULES_JSON_PATH, next_ver)
 
 def push_to_github(repo_dir, filepath, version):
     print(f"=== Committing & Pushing {filepath} (v{version}) to Git main branch ===", flush=True)
@@ -195,10 +196,16 @@ def push_to_github(repo_dir, filepath, version):
         subprocess.run(["git", "add", "."], cwd=repo_dir, check=True)
         commit_msg = f"Update YouTube Shorts feed v{version} with catchy viral Shorts"
         subprocess.run(["git", "commit", "-m", commit_msg], cwd=repo_dir, check=False)
-        subprocess.run(["git", "push", "origin", "main"], cwd=repo_dir, check=False)
-        print(f"Git push executed for v{version}.", flush=True)
+        # Run with GIT_TERMINAL_PROMPT=0 so it never hangs waiting for interactive prompt
+        env = os.environ.copy()
+        env["GIT_TERMINAL_PROMPT"] = "0"
+        res = subprocess.run(["git", "push", "origin", "main"], cwd=repo_dir, env=env, capture_output=True, text=True, timeout=10)
+        if res.returncode == 0:
+            print(f"Git push succeeded for v{version}!", flush=True)
+        else:
+            print(f"Git push skipped/failed (will use local feed): {res.stderr.strip()}", flush=True)
     except Exception as e:
-        print(f"Git push warning: {e}", flush=True)
+        print(f"Git push notice: {e}", flush=True)
 
 if __name__ == "__main__":
     harvest_catchy_shorts()
